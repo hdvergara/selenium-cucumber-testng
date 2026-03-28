@@ -13,7 +13,7 @@
 
 End-to-end web automation with **BDD**, **Page Object Model** extended with **reusable UI components**, **parallel** execution per thread, and **reporting** (Cucumber HTML + Allure).
 
-[Requirements](#requirements) · [Configuration](#configuration) · [Running tests](#running-tests) · [Project layout](#project-layout) · [Architecture](#architecture)
+[Requirements](#requirements) · [Configuration](#configuration) · [Running tests](#running-tests) · [Project layout](#project-layout) · [Architecture](#architecture) · [Reports](#reports) · [CI/CD](#cicd)
 
 </div>
 
@@ -151,6 +151,40 @@ flowchart LR
 |------|-------------------|
 | **Cucumber (HTML)** | After `mvn verify`, HTML report under `target/cucumber-html-reports/` (`maven-cucumber-reporting`; expects `cucumber.json` in `target`). |
 | **Allure** | Results in `target/allure-results`. View with the Allure CLI, e.g. `allure serve target/allure-results`. |
+
+---
+
+## CI/CD
+
+Continuous integration runs on **GitHub Actions** via **`.github/workflows/maven_tests.yml`** (workflow name: **Maven Tests**).
+
+**Triggers**
+
+| Trigger | When it runs |
+|---------|----------------|
+| **push** | Commits pushed to **`master`** or **`main`**. |
+| **pull_request** | Pull requests targeting **`master`** or **`main`**. |
+| **schedule** | Cron **`0 9 */14 * *`** — at **09:00 UTC** on days of the month aligned with that pattern (approximately **biweekly** cadence). |
+
+**Runner and toolchain**
+
+| Item | Value |
+|------|--------|
+| **OS** | `ubuntu-latest` |
+| **JDK** | **22**, **Eclipse Temurin** (`actions/setup-java@v4`) |
+| **Maven** | Dependency **cache** enabled (`cache: maven`) for faster builds |
+| **Browser** | **Google Chrome** (`google-chrome-stable`) installed on the runner before tests |
+
+**Pipeline steps (summary)**
+
+1. Checkout the repository (`actions/checkout@v4`).
+2. Set up **Java 22 (Temurin)** with **Maven cache**.
+3. Print `java -version` and `mvn --version` for traceability.
+4. Install **Google Chrome** via `apt-get`.
+5. Run tests: **`mvn test -Dheadless=true`**.
+6. **Upload artifact** **`target/allure-results/`** with **`actions/upload-artifact@v4`**, using **`if: always()`** so Allure raw results are kept **whether the job passes or fails** (`if-no-files-found: warn`, **14-day** retention).
+
+Download artifacts from the workflow run page in GitHub (**Actions** → select run → **Artifacts**).
 
 ---
 
