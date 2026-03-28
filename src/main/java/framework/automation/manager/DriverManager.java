@@ -22,6 +22,10 @@ public final class DriverManager {
         if (Boolean.parseBoolean(System.getProperty("headless", Boolean.toString(ConfigLoader.isHeadless())))) {
             options.addArguments("--headless=new", "--window-size=1920,1080");
         }
+        // GitHub Actions / Linux CI: small /dev/shm and sandbox constraints (avoids crashes / exit code 1)
+        if ("true".equalsIgnoreCase(System.getenv("CI"))) {
+            options.addArguments("--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu");
+        }
         return options;
     }
 
