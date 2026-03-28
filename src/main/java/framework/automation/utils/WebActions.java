@@ -8,14 +8,17 @@ import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.time.Duration;
+import java.util.Objects;
 
 /**
  * Provides common web actions to interact with web elements using Selenium.
  * Includes actions like clicking, sending text, retrieving text, and checking visibility.
+ * Each instance is bound to a single {@link WebDriver} (thread-safe for parallel TestNG runs).
  */
 @Slf4j
 public class WebActions {
-    private static WebDriver driver = null;
+
+    private final WebDriver driver;
 
     /**
      * Constructor that initializes the WebDriver instance.
@@ -23,7 +26,7 @@ public class WebActions {
      * @param driver The WebDriver instance.
      */
     public WebActions(WebDriver driver) {
-        WebActions.driver = driver;
+        this.driver = Objects.requireNonNull(driver, "driver");
     }
 
     /**
@@ -37,7 +40,20 @@ public class WebActions {
             new WebDriverWait(driver, Duration.ofSeconds(timeout))
                     .until(ExpectedConditions.elementToBeClickable(element));
         } catch (Exception e) {
-            log.error("Error esperando el elemento con locator: {}", element, e);
+            log.error("Error waiting for element to be clickable: {}", element, e);
+            throw e;
+        }
+    }
+
+    /**
+     * Waits until the element is visible (suitable for reading text; does not require clickability).
+     */
+    private void waitForElementVisible(WebElement element, int timeout) {
+        try {
+            new WebDriverWait(driver, Duration.ofSeconds(timeout))
+                    .until(ExpectedConditions.visibilityOf(element));
+        } catch (Exception e) {
+            log.error("Error waiting for element visibility: {}", element, e);
             throw e;
         }
     }
@@ -55,7 +71,7 @@ public class WebActions {
             highlightElement(element);
             element.click();
         } catch (Exception e) {
-            log.error("Error al hacer click en el elemento con locator: {}", element, e);
+            log.error("Error clicking element: {}", element, e);
             throw e;
         }
     }
@@ -76,14 +92,15 @@ public class WebActions {
             element.sendKeys(text);
             highlightElement(element);
         } catch (Exception e) {
-            log.error("Error al enviar texto '{}' al elemento con locator: {}", text, element, e);
+            log.error("Error sending text '{}' to element: {}", text, element, e);
             throw e;
         }
     }
 
     /**
-     * Retrieves the visible text of a web element after waiting for it to be clickable.
-     * The element is highlighted after retrieving the text.
+     * Retrieves the visible text of a web element after waiting for it to be visible.
+     * Uses {@link ExpectedConditions#visibilityOf} (not {@code elementToBeClickable}), since links or
+     * labels in tables may be readable without satisfying the clickability condition.
      *
      * @param element The WebElement to retrieve text from.
      * @param timeout The maximum wait time in seconds.
@@ -91,11 +108,11 @@ public class WebActions {
      */
     public String getText(WebElement element, int timeout) {
         try {
-            waitForElement(element, timeout);
+            waitForElementVisible(element, timeout);
             highlightElement(element);
             return element.getText();
         } catch (Exception e) {
-            log.error("Error al obtener el texto del elemento con locator: {}", element, e);
+            log.error("Error reading text from element: {}", element, e);
             throw e;
         }
     }
@@ -125,7 +142,7 @@ public class WebActions {
      *
      * @param element The WebElement to highlight.
      */
-    private static void highlightElement(WebElement element) {
+    private void highlightElement(WebElement element) {
         if (driver instanceof JavascriptExecutor) {
             ((JavascriptExecutor) driver).executeScript(
                     "arguments[0].style.border='3px solid red'", element);

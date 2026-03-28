@@ -1,56 +1,55 @@
 package framework.automation.manager;
 
-import io.github.bonigarcia.wdm.WebDriverManager;
+import framework.automation.utils.ConfigLoader;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 
 /**
- * Manages the WebDriver instance for the test execution.
- * Implements a Singleton pattern to ensure only one driver instance is created.
+ * Per-thread {@link WebDriver} using {@link ThreadLocal} for parallel Cucumber scenarios.
+ * Selenium Manager resolves the ChromeDriver binary.
  */
-public class DriverManager {
+public final class DriverManager {
 
-    private static WebDriver driver;
+    private static final ThreadLocal<WebDriver> DRIVER = new ThreadLocal<>();
 
-    /**
-     * Private constructor to prevent instantiation of the class.
-     */
     private DriverManager() {
     }
 
-    /**
-     * Returns the current WebDriver instance, initializing it if necessary.
-     * Configures ChromeDriver with optional headless mode and certificate error handling.
-     *
-     * @return The WebDriver instance.
-     */
-    public static WebDriver getDriver() {
-        if (driver == null) {
-            ChromeOptions options = new ChromeOptions();
-            WebDriverManager.chromedriver().setup();
-            options.addArguments("--incognito");
-            if (System.getProperty("headless", "false").equals("true")) {
-                options.addArguments("--headless");
-                options.addArguments("--window-size=1920,1080");
-                options.addArguments("--disable-gpu");
-                options.addArguments("--no-sandbox");
-            }
-            options.addArguments("--ignore-certificate-errors");
-            driver = new ChromeDriver(options);
-            driver.manage().window().maximize();
-        }
-        return driver;
+    private static boolean isHeadless() {
+        return Boolean.parseBoolean(System.getProperty("headless", Boolean.toString(ConfigLoader.isHeadless())));
     }
 
-    /**
-     * Closes the WebDriver instance and releases resources.
-     * Sets the driver instance to null.
-     */
+    private static ChromeOptions chromeOptions() {
+        ChromeOptions options = new ChromeOptions();
+        options.addArguments("--incognito", "--ignore-certificate-errors");
+        if (isHeadless()) {
+            options.addArguments("--headless=new", "--window-size=1920,1080");
+        }
+        // GitHub Actions / Linux CI: small /dev/shm and sandbox constraints (avoids crashes / exit code 1)
+        if ("true".equalsIgnoreCase(System.getenv("CI"))) {
+            options.addArguments("--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu");
+        }
+        return options;
+    }
+
+    public static WebDriver getDriver() {
+        if (DRIVER.get() == null) {
+            WebDriver driver = new ChromeDriver(chromeOptions());
+            // Headless already sets viewport via --window-size; maximize() can be flaky on Linux CI
+            if (!isHeadless()) {
+                driver.manage().window().maximize();
+            }
+            DRIVER.set(driver);
+        }
+        return DRIVER.get();
+    }
+
     public static void quitDriver() {
+        WebDriver driver = DRIVER.get();
         if (driver != null) {
             driver.quit();
-            driver = null;
+            DRIVER.remove();
         }
     }
 }

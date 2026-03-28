@@ -1,0 +1,64 @@
+# Primary CI pipeline: Maven tests (Selenium + Cucumber + TestNG)
+name: Maven Tests
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  pull_request:
+    branches:
+      - master
+      - main
+  schedule:
+    # 09:00 UTC every 14th day of the month (approx. biweekly cadence)
+    - cron: "0 9 */14 * *"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 22 (Eclipse Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "22"
+          cache: maven
+
+      - name: Verify Java and Maven
+        run: |
+          java -version
+          mvn --version
+
+      - name: Install Google Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
+          google-chrome --version
+
+      - name: Run tests (headless)
+        run: mvn test -Dheadless=true
+
+      # Surefire output helps diagnose assertion / WebDriver errors when the job fails
+      - name: Upload Surefire reports (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: target/surefire-reports/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-results
+          path: target/allure-results/
+          if-no-files-found: warn
+          retention-days: 14

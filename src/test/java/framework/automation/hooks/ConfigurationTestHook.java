@@ -1,17 +1,22 @@
 package framework.automation.hooks;
 
 import framework.automation.manager.DriverManager;
-import framework.automation.utils.ScreenshotUtil;
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
 import io.cucumber.java.Scenario;
+import io.qameta.allure.Allure;
+import org.openqa.selenium.OutputType;
+import org.openqa.selenium.TakesScreenshot;
+import org.openqa.selenium.WebDriver;
+
+import java.io.ByteArrayInputStream;
 
 /**
  * ConfigurationTestHook is responsible for setting up and tearing down the test environment
  * for each Cucumber scenario.
  * <p>
- * It initializes the WebDriver before each scenario and ensures that a screenshot is taken
- * if a scenario fails. Finally, it closes the WebDriver instance.
+ * It initializes the WebDriver before each scenario and, on failure, attaches a screenshot to Allure.
+ * Finally, it closes the WebDriver instance.
  */
 public class ConfigurationTestHook {
     private final TestContext testContext;
@@ -41,15 +46,29 @@ public class ConfigurationTestHook {
     /**
      * This method is executed after each scenario ends.
      * <p>
-     * If the scenario fails, it captures a screenshot. Then, it closes the WebDriver instance.
+     * If the scenario fails, captures a screenshot and attaches it to Allure. Then closes the WebDriver.
      */
     @After
     public void tearDown() {
         Scenario scenario = testContext.getScenario();
 
         if (scenario.isFailed()) {
-            ScreenshotUtil.captureScreenshot(DriverManager.getDriver(), scenario, "Failure Screenshot");
+            WebDriver driver = DriverManager.getDriver();
+            if (driver instanceof TakesScreenshot takesScreenshot) {
+                byte[] png = takesScreenshot.getScreenshotAs(OutputType.BYTES);
+                String fileName = pngFileName(scenario.getName());
+                Allure.addAttachment(fileName, "image/png", new ByteArrayInputStream(png), "png");
+            }
         }
         DriverManager.quitDriver();
+    }
+
+    /**
+     * File name: scenario name plus {@code .png} extension (path-like characters sanitized).
+     */
+    private static String pngFileName(String scenarioName) {
+        String base = (scenarioName == null || scenarioName.isBlank()) ? "scenario" : scenarioName.trim();
+        String sanitized = base.replaceAll("[\\\\/:*?\"<>|\\r\\n]", "_");
+        return sanitized.endsWith(".png") ? sanitized : sanitized + ".png";
     }
 }
