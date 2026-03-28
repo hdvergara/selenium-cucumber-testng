@@ -16,10 +16,14 @@ public final class DriverManager {
     private DriverManager() {
     }
 
+    private static boolean isHeadless() {
+        return Boolean.parseBoolean(System.getProperty("headless", Boolean.toString(ConfigLoader.isHeadless())));
+    }
+
     private static ChromeOptions chromeOptions() {
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--incognito", "--ignore-certificate-errors");
-        if (Boolean.parseBoolean(System.getProperty("headless", Boolean.toString(ConfigLoader.isHeadless())))) {
+        if (isHeadless()) {
             options.addArguments("--headless=new", "--window-size=1920,1080");
         }
         // GitHub Actions / Linux CI: small /dev/shm and sandbox constraints (avoids crashes / exit code 1)
@@ -32,7 +36,10 @@ public final class DriverManager {
     public static WebDriver getDriver() {
         if (DRIVER.get() == null) {
             WebDriver driver = new ChromeDriver(chromeOptions());
-            driver.manage().window().maximize();
+            // Headless already sets viewport via --window-size; maximize() can be flaky on Linux CI
+            if (!isHeadless()) {
+                driver.manage().window().maximize();
+            }
             DRIVER.set(driver);
         }
         return DRIVER.get();
