@@ -44,6 +44,16 @@ jobs:
       - name: Run tests (headless)
         run: mvn test -Dheadless=true
 
+      # Surefire output helps diagnose assertion / WebDriver errors when the job fails
+      - name: Upload Surefire reports (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: target/surefire-reports/
+          if-no-files-found: warn
+          retention-days: 7
+
       - name: Upload Allure results
         if: always()
         uses: actions/upload-artifact@v4
