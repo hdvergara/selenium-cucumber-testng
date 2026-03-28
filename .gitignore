@@ -37,3 +37,27 @@ build/
 ### Mac OS ###
 .DS_Store
 /.idea/
+
+### Windows ###
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+### Allure ###
+# CLI download/cache (large, machine-local). Results are under target/ when using Maven.
+.allure/
+# Default output if you run `allure generate` at the repo root
+/allure-report/
+
+### Cursor IDE ###
+.cursor/
+
+### Logs & JVM dumps ###
+*.log
+hs_err_pid*.log
+replay_pid*.log
+
+### Local environment (secrets / machine paths) ###
+.env
+.env.local
+.env.*.local
