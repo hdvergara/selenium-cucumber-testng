@@ -76,17 +76,14 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-  # Static Allure HTML published to https://<owner>.github.io/<repo>/ (after one-time Pages setup)
+  # Static Allure HTML published to https://<owner>.github.io/<repo>/ (after one-time Pages setup).
+  # Runs after tests succeed OR fail (not cancelled) so the site shows failures, screenshots, and steps.
   deploy-allure:
     concurrency:
       group: pages-${{ github.ref }}
       cancel-in-progress: false
     needs: test
-    if: >-
-      always() &&
-      needs.test.result != 'cancelled' &&
-      github.event_name != 'pull_request' &&
-      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    if: ${{ !cancelled() && (needs.test.result == 'success' || needs.test.result == 'failure') && github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') }}
     runs-on: ubuntu-latest
     environment:
       name: github-pages

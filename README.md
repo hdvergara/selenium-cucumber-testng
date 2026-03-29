@@ -183,7 +183,7 @@ Continuous integration runs on **GitHub Actions** via **`.github/workflows/maven
 4. Install **Google Chrome** via `apt-get`.
 5. Run tests: **`mvn test -Dheadless=true`**.
 6. **Upload artifact** **`target/allure-results/`** with **`actions/upload-artifact@v4`**, using **`if: always()`** so Allure raw results are kept **whether the job passes or fails** (`if-no-files-found: warn`, **14-day** retention).
-7. **Job `deploy-allure`** (only on **`push`** / **`schedule`** to **`main`** or **`master`**, not on pull requests): downloads the **`allure-results`** artifact, installs the **Allure CLI** (`allure-commandline` via npm), runs **`allure generate`**, then publishes the static site with **`actions/upload-pages-artifact`** and **`actions/deploy-pages`**.
+7. **Job `deploy-allure`** (only on **`push`** / **`schedule`** to **`main`** or **`master`**, not on pull requests): downloads the **`allure-results`** artifact, installs the **Allure CLI** (`allure-commandline` via npm), runs **`allure generate`**, then publishes the static site with **`actions/upload-pages-artifact`** and **`actions/deploy-pages`**. This job runs when tests **pass or fail** (not when the workflow is cancelled), so the public URL usually shows the **latest run** including **failed** scenarios, attachments, and steps.
 
 Download workflow artifacts from the workflow run page in GitHub (**Actions** → select run → **Artifacts**).
 
@@ -201,7 +201,7 @@ After a **one-time** repository configuration, the latest Allure HTML report is 
 
 Example for this repo: `https://hdvergara.github.io/selenium-cucumber-testng/`
 
-The site updates when a run on **`main`** or **`master`** completes the **`deploy-allure`** job successfully. Pull requests still run tests but **do not** deploy Pages (avoids permission issues and overwriting the site with every PR).
+The site updates after a run on **`main`** or **`master`** finishes the **`deploy-allure`** job—**including failed test runs**, so you can open the same URL to inspect **what broke** (subject to Allure having written results under `target/allure-results` before the JVM exited). Pull requests still run tests but **do not** deploy Pages (avoids permission issues and overwriting the site with every PR); use the **Artifacts** tab on the PR run for raw Allure data.
 
 **Local preview** (same as before): `allure serve target/allure-results` after `mvn test`.
 
