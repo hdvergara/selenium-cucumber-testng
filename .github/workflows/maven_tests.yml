@@ -1,4 +1,4 @@
-# Primary CI pipeline: Maven tests (Selenium + Cucumber + TestNG)
+# Primary CI pipeline: Maven tests (Selenium + Cucumber + TestNG) + Allure on GitHub Pages
 name: Maven Tests
 
 on:
@@ -14,10 +14,22 @@ on:
     # 09:00 UTC every 14th day of the month (approx. biweekly cadence)
     - cron: "0 9 */14 * *"
 
+# One Pages deployment at a time (GitHub recommendation)
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      CI: true
 
     steps:
       - name: Checkout repository
@@ -41,8 +53,9 @@ jobs:
           sudo apt-get install -y google-chrome-stable
           google-chrome --version
 
+      # Sequential Surefire + sequential Cucumber scenarios avoids OOM / flaky Chrome on 2-core runners
       - name: Run tests (headless)
-        run: mvn test -Dheadless=true
+        run: mvn test -Dheadless=true -Dparallel=none -DthreadCount=1
 
       # Surefire output helps diagnose assertion / WebDriver errors when the job fails
       - name: Upload Surefire reports (on failure)
@@ -62,3 +75,52 @@ jobs:
           path: target/allure-results/
           if-no-files-found: warn
           retention-days: 14
+
+  # Static Allure HTML published to https://<owner>.github.io/<repo>/ (after one-time Pages setup)
+  deploy-allure:
+    needs: test
+    if: >-
+      always() &&
+      needs.test.result != 'cancelled' &&
+      github.event_name != 'pull_request' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Download Allure results
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: allure-results
+          path: allure-results
+
+      - name: Set up Node.js (Allure CLI via npm)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Allure CLI
+        run: npm install -g allure-commandline
+
+      - name: Generate Allure static site
+        run: |
+          mkdir -p allure-results
+          if [ ! "$(ls -A allure-results 2>/dev/null)" ]; then
+            echo "No Allure results; publishing placeholder page"
+            mkdir -p allure-report
+            printf '%s\n' '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Allure</title></head><body><p>No Allure results were produced for this run.</p></body></html>' > allure-report/index.html
+          else
+            allure generate allure-results -o allure-report --clean
+          fi
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: allure-report
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -128,6 +128,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven-surefire-plugin.version}</version>
                 <configuration>
+                    <!-- Local default: parallel methods. CI overrides with -Dparallel=none (see maven_tests.yml). -->
                     <parallel>methods</parallel>
                     <threadCount>4</threadCount>
                     <includes>

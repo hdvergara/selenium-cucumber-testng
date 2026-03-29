@@ -183,8 +183,27 @@ Continuous integration runs on **GitHub Actions** via **`.github/workflows/maven
 4. Install **Google Chrome** via `apt-get`.
 5. Run tests: **`mvn test -Dheadless=true`**.
 6. **Upload artifact** **`target/allure-results/`** with **`actions/upload-artifact@v4`**, using **`if: always()`** so Allure raw results are kept **whether the job passes or fails** (`if-no-files-found: warn`, **14-day** retention).
+7. **Job `deploy-allure`** (only on **`push`** / **`schedule`** to **`main`** or **`master`**, not on pull requests): downloads the **`allure-results`** artifact, installs the **Allure CLI** (`allure-commandline` via npm), runs **`allure generate`**, then publishes the static site with **`actions/upload-pages-artifact`** and **`actions/deploy-pages`**.
 
-Download artifacts from the workflow run page in GitHub (**Actions** → select run → **Artifacts**).
+Download workflow artifacts from the workflow run page in GitHub (**Actions** → select run → **Artifacts**).
+
+### GitHub Pages (browse Allure by URL)
+
+After a **one-time** repository configuration, the latest Allure HTML report is published as a static site.
+
+1. In the GitHub repository, go to **Settings** → **Pages**.
+2. Under **Build and deployment** → **Source**, select **GitHub Actions** (not “Deploy from a branch”).
+3. Save if prompted. The workflow **`.github/workflows/maven_tests.yml`** already includes the **`deploy-allure`** job with `permissions: pages: write` and `id-token: write`.
+
+**Public URL** (project site, default):
+
+`https://<your-github-username>.github.io/<repository-name>/`
+
+Example for this repo: `https://hdvergara.github.io/selenium-cucumber-testng/`
+
+The site updates when a run on **`main`** or **`master`** completes the **`deploy-allure`** job successfully. Pull requests still run tests but **do not** deploy Pages (avoids permission issues and overwriting the site with every PR).
+
+**Local preview** (same as before): `allure serve target/allure-results` after `mvn test`.
 
 ---
 
