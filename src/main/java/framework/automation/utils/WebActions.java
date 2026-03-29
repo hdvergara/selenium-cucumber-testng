@@ -15,6 +15,7 @@ import java.util.Objects;
  * Includes actions like clicking, sending text, retrieving text, and checking visibility.
  * Each instance is bound to a single {@link WebDriver} (thread-safe for parallel TestNG runs).
  */
+@SuppressWarnings("null") // Selenium / Guava types lack @NonNull contracts; driver is enforced in constructor
 @Slf4j
 public class WebActions {
 
@@ -30,6 +31,13 @@ public class WebActions {
     }
 
     /**
+     * Satisfies null-analysis for {@link WebDriverWait} (field is already non-null after construction).
+     */
+    private WebDriver nonNullDriver() {
+        return Objects.requireNonNull(driver, "driver");
+    }
+
+    /**
      * Waits for an element to be clickable within the given timeout.
      *
      * @param element The WebElement to wait for.
@@ -37,7 +45,7 @@ public class WebActions {
      */
     private void waitForElement(WebElement element, int timeout) {
         try {
-            new WebDriverWait(driver, Duration.ofSeconds(timeout))
+            new WebDriverWait(nonNullDriver(), Duration.ofSeconds(timeout))
                     .until(ExpectedConditions.elementToBeClickable(element));
         } catch (Exception e) {
             log.error("Error waiting for element to be clickable: {}", element, e);
@@ -50,7 +58,7 @@ public class WebActions {
      */
     private void waitForElementVisible(WebElement element, int timeout) {
         try {
-            new WebDriverWait(driver, Duration.ofSeconds(timeout))
+            new WebDriverWait(nonNullDriver(), Duration.ofSeconds(timeout))
                     .until(ExpectedConditions.visibilityOf(element));
         } catch (Exception e) {
             log.error("Error waiting for element visibility: {}", element, e);
@@ -127,7 +135,7 @@ public class WebActions {
      */
     public boolean isVisible(WebElement element, int timeout) {
         try {
-            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(timeout));
+            WebDriverWait wait = new WebDriverWait(nonNullDriver(), Duration.ofSeconds(timeout));
             wait.until(ExpectedConditions.visibilityOf(element));
             highlightElement(element);
             return true;
@@ -143,8 +151,9 @@ public class WebActions {
      * @param element The WebElement to highlight.
      */
     private void highlightElement(WebElement element) {
-        if (driver instanceof JavascriptExecutor) {
-            ((JavascriptExecutor) driver).executeScript(
+        WebDriver d = nonNullDriver();
+        if (d instanceof JavascriptExecutor) {
+            ((JavascriptExecutor) d).executeScript(
                     "arguments[0].style.border='3px solid red'", element);
         }
     }
