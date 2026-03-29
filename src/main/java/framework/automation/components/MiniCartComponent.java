@@ -2,6 +2,7 @@ package framework.automation.components;
 
 import framework.automation.utils.ConfigLoader;
 import framework.automation.utils.WebActions;
+import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
@@ -14,8 +15,8 @@ import org.openqa.selenium.support.PageFactory;
  */
 public class MiniCartComponent {
 
-    @FindBy(how = How.ID, using = "cart-total")
-    private WebElement btnCartTotal;
+    /** Header cart control; DOM may be replaced after add-to-cart — use {@link WebActions#click(By, int)} not a cached {@link WebElement}. */
+    private static final By CART_TOTAL = By.id("cart-total");
 
     @FindBy(how = How.XPATH, using = "//strong[contains(text(), 'View Cart')]")
     private WebElement lblViewCart;
@@ -33,7 +34,7 @@ public class MiniCartComponent {
     }
 
     public void clickOnCartButton() {
-        webActions.click(btnCartTotal, explicitWaitSeconds);
+        webActions.click(CART_TOTAL, explicitWaitSeconds);
     }
 
     public void clickOnViewCartLabel() {
