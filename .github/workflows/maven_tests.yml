@@ -85,9 +85,13 @@ jobs:
     needs: test
     if: ${{ !cancelled() && (needs.test.result == 'success' || needs.test.result == 'failure') && github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') }}
     runs-on: ubuntu-latest
+    # Required for actions/deploy-pages (inherits workflow permissions; repeat here for forks / org policies)
+    permissions:
+      pages: write
+      id-token: write
+      contents: read
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Download Allure results
@@ -108,16 +112,23 @@ jobs:
       - name: Generate Allure static site
         run: |
           mkdir -p allure-results
+          mkdir -p allure-report
           if [ ! "$(ls -A allure-results 2>/dev/null)" ]; then
             echo "No Allure results; publishing placeholder page"
-            mkdir -p allure-report
             printf '%s\n' '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Allure</title></head><body><p>No Allure results were produced for this run.</p></body></html>' > allure-report/index.html
           else
-            allure generate allure-results -o allure-report --clean
+            if allure generate allure-results -o allure-report --clean; then
+              echo "Allure report generated"
+            else
+              echo "::warning::allure generate failed; publishing fallback page"
+              printf '%s\n' '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Allure</title></head><body><p>Allure could not build the full report from artifacts. Download <code>allure-results</code> from this workflow run.</p></body></html>' > allure-report/index.html
+            fi
           fi
+          test -f allure-report/index.html
 
+      # v4 required on GitHub.com (artifact actions v4); v3 is deprecated for Pages
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: allure-report
 

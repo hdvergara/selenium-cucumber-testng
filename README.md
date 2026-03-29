@@ -205,6 +205,13 @@ The site updates after a run on **`main`** or **`master`** finishes the **`deplo
 
 **Local preview** (same as before): `allure serve target/allure-results` after `mvn test`.
 
+**If `deploy-allure` fails**
+
+1. **Settings → Pages → Build and deployment → Source** must be **GitHub Actions** (not “Deploy from a branch”).
+2. The workflow uses **`actions/upload-pages-artifact@v4`** (required on GitHub.com; older v3 flows are deprecated for Pages).
+3. If the repo or organization uses **environment protection rules** for `github-pages`, approve the deployment in the Actions run when prompted.
+4. **Forks** often cannot deploy Pages to the parent repo URL; run from the upstream repo or use artifacts only.
+
 ---
 
 ## License & author
