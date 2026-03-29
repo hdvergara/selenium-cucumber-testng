@@ -1,7 +1,9 @@
 package framework.automation.utils;
 
 import lombok.extern.slf4j.Slf4j;
+import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -64,6 +66,25 @@ public class WebActions {
             log.error("Error waiting for element visibility: {}", element, e);
             throw e;
         }
+    }
+
+    /**
+     * Clicks after resolving the locator on each attempt. Use for dynamic headers/menus where the
+     * DOM node may be replaced (e.g. cart refresh), which causes {@link StaleElementReferenceException}
+     * with cached {@link WebElement} references from Page Factory.
+     *
+     * @param locator Element locator (re-resolved until click succeeds or timeout).
+     * @param timeout Maximum wait time in seconds.
+     */
+    public void click(By locator, int timeout) {
+        WebDriverWait wait = new WebDriverWait(nonNullDriver(), Duration.ofSeconds(timeout));
+        wait.ignoring(StaleElementReferenceException.class);
+        wait.until(d -> {
+            WebElement el = ExpectedConditions.elementToBeClickable(locator).apply(d);
+            highlightElement(el);
+            el.click();
+            return true;
+        });
     }
 
     /**
