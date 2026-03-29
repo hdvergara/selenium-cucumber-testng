@@ -16,6 +16,7 @@ import java.util.Objects;
  * Shopping cart product table (Shopping Cart page): product links by name, per-row Remove button
  * (dynamic locators), and checks that a line item is no longer displayed.
  */
+@SuppressWarnings("null") // Selenium types lack @NonNull contracts; driver is enforced in constructor
 public class ShoppingCartTableComponent {
 
     /** First product name cell in the cart table (same role as the legacy {@code lblItemAdded}). */
@@ -69,19 +70,23 @@ public class ShoppingCartTableComponent {
         this.explicitWaitSeconds = ConfigLoader.getExplicitWait();
     }
 
+    private WebDriver nonNullDriver() {
+        return Objects.requireNonNull(driver, "driver");
+    }
+
     /**
      * Visible text of the product on the first cart line (single-item scenario).
      * The step compares {@code productName} against the text read here.
      */
     public String getCartProductNameText(String productName) {
         Objects.requireNonNull(productName, "productName");
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(explicitWaitSeconds));
+        WebDriverWait wait = new WebDriverWait(nonNullDriver(), Duration.ofSeconds(explicitWaitSeconds));
         WebElement link = wait.until(ExpectedConditions.visibilityOfElementLocated(FIRST_CART_PRODUCT_LINK));
         return link.getText().trim();
     }
 
     public void clickOnRemoveItem(String productName) {
-        WebElement remove = driver.findElement(removeButtonForProduct(productName));
+        WebElement remove = nonNullDriver().findElement(removeButtonForProduct(productName));
         webActions.click(remove, explicitWaitSeconds);
     }
 
@@ -92,11 +97,11 @@ public class ShoppingCartTableComponent {
     public boolean validateItemRemoved(String productName) {
         By locator = getProductLocator(productName);
         try {
-            new WebDriverWait(driver, Duration.ofSeconds(explicitWaitSeconds))
+            new WebDriverWait(nonNullDriver(), Duration.ofSeconds(explicitWaitSeconds))
                     .until(ExpectedConditions.invisibilityOfElementLocated(locator));
             return true;
         } catch (TimeoutException e) {
-            return driver.findElements(locator).isEmpty();
+            return nonNullDriver().findElements(locator).isEmpty();
         }
     }
 }

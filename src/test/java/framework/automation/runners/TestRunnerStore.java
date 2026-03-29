@@ -15,9 +15,13 @@ import org.testng.annotations.DataProvider;
 )
 public class TestRunnerStore extends AbstractTestNGCucumberTests {
 
-    /** Parallelizes scenarios; {@code super.scenarios()} delegates to {@link io.cucumber.testng.TestNGCucumberRunner#provideScenarios()}. */
+    /**
+     * Scenarios run sequentially. Parallel {@code DataProvider} plus Surefire {@code parallel} caused
+     * flaky Chrome usage on GitHub Actions (limited RAM / multiple browsers). Re-enable
+     * {@code parallel = true} for heavy local multi-scenario runs if CI stability is not a concern.
+     */
     @Override
-    @DataProvider(parallel = true)
+    @DataProvider(parallel = false)
     public Object[][] scenarios() {
         return super.scenarios();
     }
