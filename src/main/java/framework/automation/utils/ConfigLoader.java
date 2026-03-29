@@ -19,6 +19,8 @@ public final class ConfigLoader {
 
     private static final String DEFAULT_BASE_URL = "https://opencart.abstracta.us/";
     private static final int DEFAULT_EXPLICIT_WAIT_SECONDS = 10;
+    /** Cloud CI (slow network + shared demo SUT): never go below this for explicit waits. */
+    private static final int MIN_EXPLICIT_WAIT_WHEN_CI = 25;
     private static final String DEFAULT_BROWSER = "chrome";
 
     static {
@@ -46,9 +48,14 @@ public final class ConfigLoader {
 
     /**
      * Maximum explicit wait ({@link org.openqa.selenium.support.ui.WebDriverWait}) in seconds.
+     * When {@code CI=true}, the value from config is floored at {@link #MIN_EXPLICIT_WAIT_WHEN_CI} to reduce flakes.
      */
     public static int getExplicitWait() {
-        return parsePositiveInt("timeout.explicit", DEFAULT_EXPLICIT_WAIT_SECONDS);
+        int seconds = parsePositiveInt("timeout.explicit", DEFAULT_EXPLICIT_WAIT_SECONDS);
+        if ("true".equalsIgnoreCase(System.getenv("CI"))) {
+            return Math.max(seconds, MIN_EXPLICIT_WAIT_WHEN_CI);
+        }
+        return seconds;
     }
 
     /**

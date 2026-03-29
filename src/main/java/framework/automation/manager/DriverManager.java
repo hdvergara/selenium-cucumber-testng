@@ -5,10 +5,13 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 
+import java.time.Duration;
+
 /**
  * Per-thread {@link WebDriver} using {@link ThreadLocal} for parallel Cucumber scenarios.
  * Selenium Manager resolves the ChromeDriver binary.
  */
+@SuppressWarnings("null")
 public final class DriverManager {
 
     private static final ThreadLocal<WebDriver> DRIVER = new ThreadLocal<>();
@@ -36,6 +39,11 @@ public final class DriverManager {
     public static WebDriver getDriver() {
         if (DRIVER.get() == null) {
             WebDriver driver = new ChromeDriver(chromeOptions());
+            if ("true".equalsIgnoreCase(System.getenv("CI"))) {
+                // Remote demo sites + GitHub network: avoid premature timeouts on navigation / async scripts
+                driver.manage().timeouts().pageLoadTimeout(Duration.ofSeconds(90));
+                driver.manage().timeouts().scriptTimeout(Duration.ofSeconds(60));
+            }
             // Headless already sets viewport via --window-size; maximize() can be flaky on Linux CI
             if (!isHeadless()) {
                 driver.manage().window().maximize();

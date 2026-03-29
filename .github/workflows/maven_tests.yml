@@ -14,11 +14,6 @@ on:
     # 09:00 UTC every 14th day of the month (approx. biweekly cadence)
     - cron: "0 9 */14 * *"
 
-# One Pages deployment at a time (GitHub recommendation)
-concurrency:
-  group: pages
-  cancel-in-progress: false
-
 permissions:
   contents: read
   pages: write
@@ -53,9 +48,14 @@ jobs:
           sudo apt-get install -y google-chrome-stable
           google-chrome --version
 
-      # Sequential Surefire + sequential Cucumber scenarios avoids OOM / flaky Chrome on 2-core runners
+      # Retries: shared demo URL + cross-region latency often cause transient failures on free runners
       - name: Run tests (headless)
-        run: mvn test -Dheadless=true -Dparallel=none -DthreadCount=1
+        uses: nick-fields/retry@v3
+        with:
+          timeout_minutes: 22
+          max_attempts: 3
+          retry_wait_seconds: 45
+          command: mvn test -Dheadless=true -Dparallel=none -DthreadCount=1
 
       # Surefire output helps diagnose assertion / WebDriver errors when the job fails
       - name: Upload Surefire reports (on failure)
@@ -78,6 +78,9 @@ jobs:
 
   # Static Allure HTML published to https://<owner>.github.io/<repo>/ (after one-time Pages setup)
   deploy-allure:
+    concurrency:
+      group: pages-${{ github.ref }}
+      cancel-in-progress: false
     needs: test
     if: >-
       always() &&
